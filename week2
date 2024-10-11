@@ -1,5 +1,83 @@
+#task1.sh
+
 #!/bin/bash
 cd ~/catkin_ws/src/linux_exam
 mkdir -p this/is/my/linux/exam
 touch this/is/my/linux/exam/my_file.py
 echo "This bash script has finished!"
+
+#task2.sh
+
+#!/bin/bash
+cd ~/catkin_ws/src/linux_exam
+case $1 in
+    small_square)
+        rosrun linux_exam small_square.py
+        ;;
+    medium_square)
+        rosrun linux_exam medium_square.py
+        ;;
+    big_square)
+        rosrun linux_exam big_square.py
+        ;;
+    *)
+        echo "Invalid parameter!"
+        ;;
+esac
+
+#task3.sh
+
+#!/bin/bash
+cd ~/catkin_ws/src/linux_exam/this/is/my/linux/exam
+rm -f exam1.py exam2.py exam3.py
+touch exam1.py exam2.py exam3.py
+chmod 751 exam1.py  # Owner: rwx, Group: rx, Others: r
+chmod 751 exam2.py  # Owner: rx, Group: None, Others: x
+chmod 511 exam3.py  # Owner: w, Group: r, Others: x
+
+task1.py
+
+def get_highest_lowest():
+    robot_control = RobotControl()  # Assuming this is defined elsewhere
+    laser_readings = robot_control.get_laser_readings()  # Get laser values
+
+    # Filter out inf values
+    filtered_readings = [value for value in laser_readings if value != float('inf')]
+    
+    highest = max(filtered_readings)
+    lowest = min(filtered_readings)
+
+    return filtered_readings.index(highest), filtered_readings.index(lowest)
+
+task2.py
+
+def move_robot():
+    robot_control = RobotControl()  # Assuming RobotControl is defined
+    robot_control.move_forward()
+
+    while True:
+        readings = robot_control.get_laser_readings()
+        if readings[0] < 1.0:  # Assuming index 0 is the front reading
+            robot_control.stop()
+            robot_control.turn_right(90)  # Assuming a turn method exists
+            break
+
+
+task3.py
+
+class ExamControl:
+    def get_laser_readings(self):
+        # Assuming we get readings from the robot's sensors
+        return [left_reading, right_reading]  # Replace with actual values
+
+    def main(self):
+        robot_control = RobotControl()
+        robot_control.move_forward()
+        
+        while True:
+            readings = self.get_laser_readings()
+            if readings[0] > 1 and readings[1] > 1:  # Check left and right
+                robot_control.stop()
+                break
+
+
