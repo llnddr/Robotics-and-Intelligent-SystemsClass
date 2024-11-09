@@ -1,0 +1,245 @@
+1. Kode Python untuk Implementasi PRM
+Kode berikut akan menghasilkan node acak, membuat graf, dan mencari jalur terpendek menggunakan Dijkstra.
+
+python
+Copy code
+import numpy as np
+import matplotlib.pyplot as plt
+import networkx as nx
+
+# Parameter konfigurasi
+num_nodes = 100  # Jumlah node yang akan dihasilkan
+connection_radius = 20  # Radius untuk menghubungkan node terdekat
+start = (10, 10)  # Koordinat awal
+goal = (90, 90)  # Koordinat tujuan
+
+# Fungsi untuk menghasilkan node acak dalam area tertentu
+def generate_random_nodes(num_nodes, x_max=100, y_max=100):
+    nodes = np.random.rand(num_nodes, 2) * [x_max, y_max]
+    return nodes
+
+# Fungsi untuk membuat graf berdasarkan node dan radius koneksi
+def create_graph(nodes, radius):
+    G = nx.Graph()
+    for i, node in enumerate(nodes):
+        G.add_node(i, pos=node)
+        for j in range(i):
+            if np.linalg.norm(node - nodes[j]) < radius:
+                G.add_edge(i, j, weight=np.linalg.norm(node - nodes[j]))
+    return G
+
+# Fungsi untuk mencari jalur terpendek dengan Dijkstra
+def shortest_path(graph, start_idx, goal_idx):
+    try:
+        path = nx.shortest_path(graph, source=start_idx, target=goal_idx, weight='weight')
+        return path
+    except nx.NetworkXNoPath:
+        return None
+
+# Implementasi utama
+nodes = generate_random_nodes(num_nodes)
+graph = create_graph(nodes, connection_radius)
+
+# Temukan node terdekat dengan start dan goal
+start_idx = np.argmin(np.linalg.norm(nodes - start, axis=1))
+goal_idx = np.argmin(np.linalg.norm(nodes - goal, axis=1))
+
+# Cari jalur terpendek
+path = shortest_path(graph, start_idx, goal_idx)
+
+# Visualisasi
+plt.figure(figsize=(8, 8))
+for (i, j) in graph.edges:
+    plt.plot([nodes[i][0], nodes[j][0]], [nodes[i][1], nodes[j][1]], 'bo-', alpha=0.3)
+plt.plot(nodes[:, 0], nodes[:, 1], 'bo', markersize=5)
+
+# Tampilkan jalur terpendek
+if path:
+    for i in range(len(path) - 1):
+        plt.plot([nodes[path[i]][0], nodes[path[i + 1]][0]], [nodes[path[i]][1], nodes[path[i + 1]][1]], 'ro-')
+
+plt.plot(start[0], start[1], 'go', markersize=10, label='Start')
+plt.plot(goal[0], goal[1], 'mo', markersize=10, label='Goal')
+plt.legend()
+plt.title('Probabilistic Roadmap (PRM)')
+plt.show()
+
+## Penjelasan Kode
+- generate_random_nodes: Membuat sejumlah num_nodes node acak.
+- create_graph: Membuat graf dengan menghubungkan node yang berada dalam connection_radius.
+- shortest_path: Menggunakan Dijkstra untuk menemukan jalur terpendek antara node start dan goal.
+- Visualisasi dilakukan dengan Matplotlib untuk menunjukkan node, edge, dan jalur terpendek.\
+
+2. Konfigurasi ROS (File params.yaml dan prm.launch)
+File params.yaml
+Buat file params.yaml untuk menyimpan parameter konfigurasi.
+
+yaml
+Copy code
+num_nodes: 100
+connection_radius: 20
+start_position: [10, 10]
+goal_position: [90, 90]
+
+File prm.launch
+Buat file prm.launch untuk menjalankan kode di atas dalam ROS. Pastikan kamu sudah mengonfigurasi ROS agar bisa menjalankan Python dengan ROS node.
+
+xml
+Copy code
+<launch>
+    <node name="prm_node" pkg="prm_package" type="prm.py" output="screen">
+        <param name="num_nodes" value="$(arg num_nodes)" />
+        <param name="connection_radius" value="$(arg connection_radius)" />
+        <param name="start_position" value="$(arg start_position)" />
+        <param name="goal_position" value="$(arg goal_position)" />
+    </node>
+</launch>
+
+## Catatan:
+- Kamu perlu mengganti pkg="prm_package" dengan nama package ROS yang kamu buat untuk menjalankan script ini.
+- Pastikan prm.py berada dalam package ROS yang telah kamu buat, dan sudah diizinkan untuk dijalankan (chmod +x prm.py).
+
+3. Menjalankan di ROS
+Setelah konfigurasi selesai:
+
+Buka terminal dan arahkan ke workspace ROS kamu.
+Build package jika diperlukan dengan perintah:
+bash
+Copy code
+catkin_make
+Jalankan launch file:
+bash
+Copy code
+roslaunch prm_package prm.launch
+
+Ini akan menjalankan simulasi PRM dan menampilkan hasilnya di terminal atau visualisasi sesuai dengan konfigurasi yang sudah dibuat.
+
+4. Implementasi RRT dengan Konfigurasi di ROS
+Untuk menjalankan algoritma RRT dengan ROS dan menampilkan hasilnya di Rviz, kamu bisa mengikuti langkah-langkah berikut:
+
+a. Kode Python untuk RRT
+Pastikan kamu memiliki file rrt.py yang mengimplementasikan algoritma RRT. Berikut adalah contoh sederhana implementasi RRT dalam Python:
+
+python
+Copy code
+import numpy as np
+import matplotlib.pyplot as plt
+import random
+from scipy.spatial import KDTree
+
+# Parameter konfigurasi
+step_size = 5.0  # Langkah untuk perluasan node
+goal_threshold = 5.0  # Radius untuk mencapai goal
+map_size = (100, 100)  # Ukuran area map
+start = (10, 10)  # Titik awal
+goal = (90, 90)  # Titik tujuan
+max_iterations = 1000  # Batas jumlah iterasi
+
+# Fungsi RRT
+class Node:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.parent = None
+
+def distance(node1, node2):
+    return np.sqrt((node1.x - node2.x)**2 + (node1.y - node2.y)**2)
+
+def steer(node_from, node_to, step_size):
+    angle = np.arctan2(node_to.y - node_from.y, node_to.x - node_from.x)
+    new_x = node_from.x + step_size * np.cos(angle)
+    new_y = node_from.y + step_size * np.sin(angle)
+    new_node = Node(new_x, new_y)
+    new_node.parent = node_from
+    return new_node
+
+def rrt(start, goal):
+    start_node = Node(start[0], start[1])
+    goal_node = Node(goal[0], goal[1])
+    nodes = [start_node]
+    tree = KDTree([(start_node.x, start_node.y)])
+    
+    for i in range(max_iterations):
+        rand_point = Node(random.uniform(0, map_size[0]), random.uniform(0, map_size[1]))
+        _, nearest_idx = tree.query([rand_point.x, rand_point.y])
+        nearest_node = nodes[nearest_idx]
+        
+        new_node = steer(nearest_node, rand_point, step_size)
+        nodes.append(new_node)
+        tree = KDTree([(node.x, node.y) for node in nodes])
+        
+        if distance(new_node, goal_node) < goal_threshold:
+            goal_node.parent = new_node
+            nodes.append(goal_node)
+            break
+    
+    return nodes, goal_node
+
+# Implementasi dan visualisasi hasil
+nodes, goal_node = rrt(start, goal)
+
+# Fungsi untuk visualisasi jalur di matplotlib
+def plot_path(nodes, goal_node):
+    path = []
+    current = goal_node
+    while current:
+        path.append((current.x, current.y))
+        current = current.parent
+    path = path[::-1]
+    
+    plt.figure(figsize=(8, 8))
+    for node in nodes:
+        if node.parent:
+            plt.plot([node.x, node.parent.x], [node.y, node.parent.y], 'b-')
+    path_x, path_y = zip(*path)
+    plt.plot(path_x, path_y, 'r-', linewidth=2, label="Path")
+    plt.plot(start[0], start[1], 'go', markersize=10, label='Start')
+    plt.plot(goal[0], goal[1], 'mo', markersize=10, label='Goal')
+    plt.legend()
+    plt.title("RRT Path")
+    plt.show()
+
+plot_path(nodes, goal_node)
+b. File Konfigurasi params.yaml
+Buat file params.yaml untuk menyimpan parameter konfigurasi:
+
+yaml
+Copy code
+step_size: 5.0
+goal_threshold: 5.0
+map_size: [100, 100]
+start_position: [10, 10]
+goal_position: [90, 90]
+max_iterations: 1000
+c. File Launch rrt.launch
+Buat file rrt.launch untuk menjalankan algoritma RRT dengan ROS dan Rviz:
+
+xml
+Copy code
+<launch>
+    <node name="rrt_node" pkg="rrt_package" type="rrt.py" output="screen">
+        <param name="step_size" value="$(arg step_size)" />
+        <param name="goal_threshold" value="$(arg goal_threshold)" />
+        <param name="map_size" value="$(arg map_size)" />
+        <param name="start_position" value="$(arg start_position)" />
+        <param name="goal_position" value="$(arg goal_position)" />
+        <param name="max_iterations" value="$(arg max_iterations)" />
+    </node>
+</launch>
+Catatan: Pastikan kamu mengganti pkg="rrt_package" dengan nama package ROS yang berisi file rrt.py.
+
+5. Cara Menganalisis Hasil dari Simulasi
+Berikut adalah beberapa cara untuk menganalisis hasil dari simulasi tugas-tugas PRM dan RRT yang telah kamu lakukan:
+
+a. Analisis Efektivitas Algoritma
+- PRM: Perhatikan bagaimana node terhubung dalam graf. Algoritma PRM biasanya lebih efektif dalam ruang yang memiliki banyak kendala, karena ia dapat menghubungkan node dengan jarak tertentu.
+- RRT: Lihat bagaimana jalur terbentuk dari start hingga goal. RRT bekerja dengan memperluas jalur secara acak dan cocok untuk lingkungan yang dinamis.
+b. Keakuratan Jalur Terpendek
+- PRM: Lihat apakah jalur yang dihasilkan dari PRM adalah yang terpendek atau efisien dari segi jarak. Periksa jika algoritma PRM menemukan jalur optimal yang menghubungkan node awal dan tujuan.
+- RRT: Bandingkan jalur yang dihasilkan dengan PRM. RRT cenderung menghasilkan jalur yang kurang optimal dibanding PRM, tetapi dapat lebih cepat menyesuaikan di lingkungan yang lebih besar.
+c. Perbandingan Waktu Komputasi
+- Ukur waktu komputasi dari setiap algoritma (PRM dan RRT) untuk menemukan jalur dari start ke goal.
+- Bandingkan berapa lama masing-masing algoritma menyelesaikan tugas di area yang sama.
+d. Kemudahan Visualisasi
+- Matplotlib: Visualisasi di Matplotlib biasanya memberikan gambaran yang lebih sederhana, tetapi memadai untuk melihat jalur yang dihasilkan.
+- Rviz: Visualisasi di Rviz memberikan gambaran tiga dimensi yang lebih realistis dan memungkinkan kamu melihat jalur dalam konteks yang lebih mendalam. Periksa apakah node dan jalur terlihat jelas dan mengikuti posisi yang diharapkan di Rviz.
