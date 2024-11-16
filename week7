@@ -1,1 +1,68 @@
+Simulasi Gerakan Dasar (JetBot Basic Motion)
+from controller import Robot
 
+robot = Robot()
+time_step = 32
+
+# Mendapatkan kontrol motor
+left_motor = robot.getMotor('left wheel motor')
+right_motor = robot.getMotor('right wheel motor')
+left_motor.setPosition(float('inf'))
+right_motor.setPosition(float('inf'))
+
+# Uji gerakan dasar
+def basic_motion():
+    left_motor.setVelocity(3.0)  # Maju
+    right_motor.setVelocity(3.0)
+    robot.step(1000)  # Durasi maju
+    left_motor.setVelocity(0.0)  # Berhenti
+    right_motor.setVelocity(0.0)
+    robot.step(1000)
+    left_motor.setVelocity(-3.0)  # Belok
+    right_motor.setVelocity(3.0)
+    robot.step(1000)
+
+basic_motion()
+
+Pengumpulan Data (jetbot_collect_data)
+import cv2
+
+camera = robot.getCamera("camera")
+camera.enable(time_step)
+
+# Folder penyimpanan data
+free_path = './data/free/'
+blocked_path = './data/blocked/'
+
+def capture_images(label):
+    for i in range(20):  # Ambil 20 gambar
+        image = camera.getImage()
+        image_array = camera.imageGetData(image)
+        file_path = f"{label}_{i}.jpg"
+        cv2.imwrite(file_path, image_array)
+        robot.step(time_step)
+
+# Jalankan JetBot untuk kategori "Free" dan "Blocked"
+capture_images(free_path)
+capture_images(blocked_path)
+
+ Simulasi Penghindaran Tabrakan
+import keras
+from keras.models import load_model
+import numpy as np
+
+model = load_model('./model/collision_avoidance.h5')
+
+def collision_avoidance():
+    while robot.step(time_step) != -1:
+        image = camera.getImage()
+        image_array = np.array(camera.imageGetData(image))
+        prediction = model.predict(image_array)
+        if prediction == "free":
+            left_motor.setVelocity(3.0)
+            right_motor.setVelocity(3.0)
+        else:  # blocked
+            left_motor.setVelocity(-3.0)
+            right_motor.setVelocity(3.0)
+
+collision_avoidance()
