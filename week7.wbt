@@ -1,0 +1,27 @@
+#VRML_SIM R2023b utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/objects/floors/protos/RectangleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023b/projects/robots/nvidia/jetbot/protos/JetBot.proto"
+
+WorldInfo {
+}
+Viewpoint {
+  orientation -0.11771644185270158 0.4246980986851141 0.8976493548656895 0.5990097174597376
+  position -1.0957177381141168 -0.6315589887706341 0.5264588810065804
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+}
+JetBot {
+  hidden translation_6 0.02999969770745209 0.0521500000157608 0.030000440435445974
+  hidden rotation_6 -0.28941512383025875 -0.2894140627129973 0.9124025352892621 1.6623458576431942
+  hidden translation_7 0.030000317222304815 -0.05949999998422251 0.030000437760979617
+  hidden rotation_7 0.28941524479079045 0.2894152447878471 0.9124021219654617 1.6623426428013353
+  translation 1.755621842521038e-06 5.739031281440067e-07 -0.00033836978703699616
+  rotation 0.002915589877360515 -0.998222171929573 0.05953146062270958 0.004047253500258215
+}
