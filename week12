@@ -1,0 +1,277 @@
+Filter Kalman untuk Estimasi Posisi Robot:
+
+Gunakan persamaan Kalman Filter untuk memprediksi posisi robot berdasarkan posisi sebelumnya, kecepatan, dan pengukuran sensor.
+Implementasikan dalam Python dengan numpy untuk kalkulasi matematis dan matplotlib untuk visualisasi.
+Filter Partikel untuk Estimasi Posisi Robot:
+
+Gunakan partikel-partikel untuk memodelkan posisi robot dan perbarui posisi tersebut berdasarkan observasi sensor.
+Visualisasikan distribusi partikel dan estimasi posisi robot menggunakan matplotlib.
+Localization dengan Sensor IMU dan Lidar:
+
+Gunakan data dari sensor IMU (untuk orientasi dan akselerasi) dan Lidar (untuk deteksi jarak ke rintangan).
+Kombinasikan data sensor menggunakan algoritma sensor fusion (contohnya Extended Kalman Filter).
+Simulasi Extended Kalman Filter untuk Navigasi:
+
+Implementasikan EKF untuk memperkirakan posisi robot di lingkungan yang kompleks.
+Gunakan model kinematik robot untuk prediksi dan pembaruan posisi berdasarkan pengukuran.
+Particle Filter untuk Navigasi:
+
+Buat simulasi navigasi di mana robot menggunakan particle filter untuk memperkirakan posisi di peta.
+Pastikan untuk menangani noise dari sensor dalam implementasi.
+
+Kode Python - Kalman Filter untuk Estimasi Posisi Robot
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Parameter simulasi
+dt = 1.0  # Waktu antara pengukuran
+n = 50  # Jumlah langkah simulasi
+
+# Variabel sistem (1D motion)
+F = np.array([[1, dt], [0, 1]])  # Matriks transisi keadaan
+H = np.array([[1, 0]])  # Matriks pengamatan
+Q = np.array([[1, 0], [0, 3]])  # Variansi noise proses
+R = np.array([[10]])  # Variansi noise pengukuran
+
+# Inisialisasi variabel
+x = np.array([[0], [1]])  # Keadaan awal (posisi, kecepatan)
+P = np.eye(2)  # Matriks kovarians awal
+
+# Data simulasi
+true_position = [0]  # Posisi sebenarnya
+measured_position = []  # Pengukuran posisi
+kalman_position = []  # Estimasi posisi oleh Kalman Filter
+
+# Simulasi gerak dan pengukuran
+for i in range(n):
+    # Gerak sebenarnya
+    x_true = F @ np.array([[true_position[-1]], [1]])
+    true_position.append(x_true[0, 0])
+
+    # Pengukuran (dengan noise)
+    z = H @ x_true + np.random.normal(0, np.sqrt(R[0, 0]), size=(1, 1))
+    measured_position.append(z[0, 0])
+
+    # Prediksi Kalman Filter
+    x_pred = F @ x
+    P_pred = F @ P @ F.T + Q
+
+    # Update Kalman Filter
+    K = P_pred @ H.T @ np.linalg.inv(H @ P_pred @ H.T + R)
+    x = x_pred + K @ (z - H @ x_pred)
+    P = (np.eye(2) - K @ H) @ P_pred
+
+    # Simpan hasil estimasi
+    kalman_position.append(x[0, 0])
+
+# Plot hasil
+plt.figure(figsize=(10, 6))
+plt.plot(true_position, label="True Position", linestyle="--", marker="o")
+plt.plot(measured_position, label="Measured Position", linestyle=":", marker="x")
+plt.plot(kalman_position, label="Kalman Estimate", marker="s")
+plt.xlabel("Time Step")
+plt.ylabel("Position")
+plt.legend()
+plt.title("Kalman Filter - Position Estimation")
+plt.grid()
+plt.show()
+
+Penjelasan Kode
+Model Gerak 1D:
+
+Posisi dan kecepatan dihitung sebagai variabel keadaan.
+Matriks F digunakan untuk memprediksi keadaan berdasarkan model gerak.
+Pengukuran dengan Noise:
+
+Pengukuran posisi ditambahkan noise menggunakan distribusi normal.
+Kalman Filter:
+
+Prediksi posisi (x_pred) dan update berdasarkan pengukuran (z).
+Visualisasi:
+
+Hasil estimasi Kalman Filter dibandingkan dengan posisi sebenarnya dan pengukuran.
+
+Kode Python - Particle Filter untuk Estimasi Posisi Robot
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Parameter simulasi
+n_particles = 500  # Jumlah partikel
+n_steps = 50  # Jumlah langkah simulasi
+motion_noise = 1.0  # Noise gerakan
+measurement_noise = 5.0  # Noise pengukuran
+initial_position = 0  # Posisi awal robot
+
+# Fungsi untuk memperbarui partikel berdasarkan gerakan
+def motion_update(particles, motion, noise_std):
+    return particles + motion + np.random.normal(0, noise_std, particles.shape)
+
+# Fungsi untuk menghitung bobot berdasarkan pengukuran
+def measurement_update(particles, measurement, noise_std):
+    weights = np.exp(-0.5 * ((particles - measurement) ** 2) / noise_std**2)
+    return weights / np.sum(weights)
+
+# Fungsi resampling berdasarkan bobot
+def resample(particles, weights):
+    indices = np.random.choice(len(particles), size=len(particles), p=weights)
+    return particles[indices]
+
+# Inisialisasi
+particles = np.random.uniform(initial_position - 10, initial_position + 10, n_particles)
+true_position = [initial_position]
+measured_position = []
+estimated_position = []
+
+# Simulasi
+for step in range(n_steps):
+    # Simulasi gerak sebenarnya
+    true_pos = true_position[-1] + np.random.normal(1, motion_noise)
+    true_position.append(true_pos)
+
+    # Simulasi pengukuran dengan noise
+    measurement = true_pos + np.random.normal(0, measurement_noise)
+    measured_position.append(measurement)
+
+    # Update partikel berdasarkan gerakan
+    particles = motion_update(particles, motion=1, noise_std=motion_noise)
+
+    # Update bobot berdasarkan pengukuran
+    weights = measurement_update(particles, measurement, measurement_noise)
+
+    # Resampling
+    particles = resample(particles, weights)
+
+    # Estimasi posisi (mean dari partikel)
+    estimated_position.append(np.mean(particles))
+
+# Plot hasil
+plt.figure(figsize=(12, 6))
+plt.plot(true_position, label="True Position", linestyle="--", marker="o")
+plt.plot(measured_position, label="Measured Position", linestyle=":", marker="x")
+plt.plot(estimated_position, label="Particle Filter Estimate", marker="s")
+plt.xlabel("Time Step")
+plt.ylabel("Position")
+plt.title("Particle Filter - Position Estimation")
+plt.legend()
+plt.grid()
+plt.show()
+
+Penjelasan Kode
+Inisialisasi Partikel:
+
+Partikel diinisialisasi dengan distribusi seragam di sekitar posisi awal.
+Motion Update:
+
+Posisi partikel diperbarui berdasarkan gerakan robot dengan tambahan noise.
+Measurement Update:
+
+Bobot dihitung berdasarkan seberapa dekat partikel terhadap pengukuran, dengan menggunakan distribusi Gaussian.
+Resampling:
+
+Partikel dengan bobot tinggi dipilih ulang (resampled) untuk menjaga representasi yang baik dari distribusi posisi.
+Estimasi Posisi:
+
+Posisi robot diestimasi sebagai rata-rata dari semua partikel.
+Visualisasi:
+
+Grafik menunjukkan perbandingan antara posisi sebenarnya, pengukuran dengan noise, dan estimasi partikel.
+Langkah-Langkah Simulasi di Webots
+Konfigurasi Robot E-puck:
+
+Buka Webots dan tambahkan robot E-puck ke lingkungan simulasi.
+Pastikan sensor yang relevan (seperti IMU, encoder roda, atau sensor jarak) diaktifkan.
+Controller Robot:
+
+Gunakan Python sebagai bahasa pemrograman untuk membuat controller.
+Implementasikan Kalman Filter di controller untuk memprediksi posisi berdasarkan data sensor.
+Kalman Filter:
+
+Tentukan model kinematik robot (misalnya, model differential drive).
+Perbarui prediksi posisi dengan menggunakan data sensor dan model gerakan.
+Dokumentasikan Hasil:
+
+Simpan hasil estimasi posisi dalam bentuk grafik atau log data.
+Bandingkan hasil estimasi dengan posisi sebenarnya (ground truth) di Webots.
+
+Untuk implementasi Kalman Filter di Webots dengan robot E-puck, berikut adalah langkah umum yang dapat kamu ikuti:
+
+Langkah-Langkah Simulasi di Webots
+Konfigurasi Robot E-puck:
+
+Buka Webots dan tambahkan robot E-puck ke lingkungan simulasi.
+Pastikan sensor yang relevan (seperti IMU, encoder roda, atau sensor jarak) diaktifkan.
+Controller Robot:
+
+Gunakan Python sebagai bahasa pemrograman untuk membuat controller.
+Implementasikan Kalman Filter di controller untuk memprediksi posisi berdasarkan data sensor.
+Kalman Filter:
+
+Tentukan model kinematik robot (misalnya, model differential drive).
+Perbarui prediksi posisi dengan menggunakan data sensor dan model gerakan.
+Dokumentasikan Hasil:
+
+Simpan hasil estimasi posisi dalam bentuk grafik atau log data.
+Bandingkan hasil estimasi dengan posisi sebenarnya (ground truth) di Webots.
+
+Kode Python - Controller Robot E-puck dengan Kalman Filter
+from controller import Robot, GPS, InertialUnit
+import numpy as np
+
+# Inisialisasi robot
+robot = Robot()
+timestep = int(robot.getBasicTimeStep())
+
+# Inisialisasi sensor
+gps = robot.getDevice("gps")
+gps.enable(timestep)
+
+imu = robot.getDevice("inertial unit")
+imu.enable(timestep)
+
+# Parameter Kalman Filter
+dt = timestep / 1000.0
+F = np.array([[1, 0, dt, 0], [0, 1, 0, dt], [0, 0, 1, 0], [0, 0, 0, 1]])
+H = np.array([[1, 0, 0, 0], [0, 1, 0, 0]])
+Q = np.eye(4) * 0.01
+R = np.eye(2) * 0.1
+P = np.eye(4)
+x = np.array([[0], [0], [0], [0]])
+
+# Fungsi Kalman Filter
+def kalman_filter(z, x, P):
+    # Prediksi
+    x_pred = F @ x
+    P_pred = F @ P @ F.T + Q
+
+    # Update
+    K = P_pred @ H.T @ np.linalg.inv(H @ P_pred @ H.T + R)
+    x_new = x_pred + K @ (z - H @ x_pred)
+    P_new = (np.eye(len(K)) - K @ H) @ P_pred
+    return x_new, P_new
+
+# Loop utama
+while robot.step(timestep) != -1:
+    # Membaca sensor
+    gps_values = gps.getValues()
+    z = np.array([[gps_values[0]], [gps_values[1]]])  # Pengukuran posisi (x, y)
+
+    # Update Kalman Filter
+    x, P = kalman_filter(z, x, P)
+
+    # Cetak hasil estimasi
+    print(f"Estimated Position: x = {x[0, 0]:.2f}, y = {x[1, 0]:.2f}")
+Penjelasan Kode
+Inisialisasi Sensor:
+
+Menggunakan GPS untuk mendapatkan posisi dan IMU untuk orientasi.
+Model Kalman Filter:
+
+Matriks F untuk transisi keadaan.
+Matriks H untuk pengamatan sensor.
+Update Filter:
+
+Prediksi posisi berdasarkan model gerakan.
+Perbarui estimasi dengan data sensor GPS.
+Output Hasil:
+
+Posisi estimasi dicetak di terminal untuk verifikasi.
